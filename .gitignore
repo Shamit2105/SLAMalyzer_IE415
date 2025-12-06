@@ -1,0 +1,82 @@
+# Android
+*.apk
+*.ap_
+*.dex
+*.class
+.buildconfig
+.R.txt
+
+# Gradle
+.gradle/
+/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+
+# IntelliJ Idea
+*.iml
+.idea/
+*.iws
+*.ipr
+*.swp
+
+# Local configuration file
+/local.properties
+/local.gradle
+
+# Android Studio
+.settings/
+.classpath
+.project
+.c9/
+*.launch
+.metadata
+.recommenders
+
+# Gradle Wrapper
+!gradle/wrapper/gradle-wrapper.jar
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+*.swp
+
+# temp_downloads and build artifacts
+/temp_downloads/
+*.o
+*.a
+*.so
+*.zip
+
+# Python scripts for setup (IDE artifacts)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# CMake
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# Native build output
+/app/src/main/jniLibs/*/libopencv_java4.so (if not committed)
+/app/build/intermediates/
+
+# OpenCV and third-party libraries (local copies)
+# Users should download these themselves
+# /app/src/main/cpp/Eigen/eigen-3.4.0/
+# /app/src/main/cpp/boost/boost-1_72_0/
+# /app/src/main/cpp/opencv/opencv-4.12.0/
+# /app/src/main/cpp/ORB/Thirdparty/Sophus/
+
+# Generated files
+.gradle.properties.bak
+*.bak
+
+# Native Dependencies
+app/src/main/cpp/boost/
+app/src/main/cpp/Eigen/
+app/src/main/cpp/opencv/
+app/src/main/cpp/openssl/

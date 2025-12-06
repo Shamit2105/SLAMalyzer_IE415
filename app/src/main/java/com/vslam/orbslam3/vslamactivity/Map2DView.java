@@ -1,0 +1,245 @@
+package com.vslam.orbslam3.vslamactivity;
+
+import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.util.AttributeSet;
+import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
+import android.view.GestureDetector;
+import android.view.View;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Map2DView extends View {
+
+    private List<float[]> slamPath = new ArrayList<>();
+    private List<float[]> drPath = new ArrayList<>();
+    private List<float[]> obstacles = new ArrayList<>();
+    private float fps = 0;
+    
+    private Paint slamPaint;
+    private Paint drPaint;
+    private Paint obstaclePaint;
+    private Paint textPaint;
+    private Paint driftPaint;
+    private Paint startPaint;
+    private Paint endPaint;
+    
+    private float minX, maxX, minZ, maxZ;
+    
+    // Zoom and Pan
+    private ScaleGestureDetector scaleDetector;
+    private GestureDetector gestureDetector;
+    private float zoomFactor = 1.0f;
+    private float panX = 0f;
+    private float panY = 0f;
+
+    public Map2DView(Context context) {
+        super(context);
+        init(context);
+    }
+
+    public Map2DView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        init(context);
+    }
+
+    private void init(Context context) {
+        slamPaint = new Paint();
+        slamPaint.setColor(Color.BLUE);
+        slamPaint.setStrokeWidth(5f);
+        slamPaint.setStyle(Paint.Style.STROKE);
+        slamPaint.setAntiAlias(true);
+
+        drPaint = new Paint();
+        drPaint.setColor(Color.GREEN);
+        drPaint.setStrokeWidth(5f);
+        drPaint.setStyle(Paint.Style.STROKE);
+        drPaint.setAntiAlias(true);
+        
+        obstaclePaint = new Paint();
+        obstaclePaint.setColor(Color.RED);
+        obstaclePaint.setStyle(Paint.Style.FILL);
+        obstaclePaint.setAntiAlias(true);
+        
+        textPaint = new Paint();
+        textPaint.setColor(Color.WHITE);
+        textPaint.setTextSize(50f); // Increased from 40f
+        textPaint.setFakeBoldText(true); // Added bold
+        textPaint.setShadowLayer(3f, 1f, 1f, Color.BLACK); // Added shadow
+        textPaint.setAntiAlias(true);
+        
+        driftPaint = new Paint();
+        driftPaint.setColor(Color.GREEN);
+        driftPaint.setTextSize(50f); // Increased from 40f
+        driftPaint.setFakeBoldText(true); // Added bold
+        driftPaint.setShadowLayer(3f, 1f, 1f, Color.BLACK); // Added shadow
+        driftPaint.setAntiAlias(true);
+        
+        startPaint = new Paint();
+        startPaint.setColor(Color.CYAN);
+        startPaint.setStyle(Paint.Style.FILL);
+        startPaint.setAntiAlias(true);
+        
+        endPaint = new Paint();
+        endPaint.setColor(Color.MAGENTA);
+        endPaint.setStyle(Paint.Style.FILL);
+        endPaint.setAntiAlias(true);
+        
+        // Gesture Detectors
+        scaleDetector = new ScaleGestureDetector(context, new ScaleListener());
+        gestureDetector = new GestureDetector(context, new GestureListener());
+    }
+    
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        scaleDetector.onTouchEvent(event);
+        gestureDetector.onTouchEvent(event);
+        return true;
+    }
+    
+    private class ScaleListener extends ScaleGestureDetector.SimpleOnScaleGestureListener {
+        @Override
+        public boolean onScale(ScaleGestureDetector detector) {
+            zoomFactor *= detector.getScaleFactor();
+            zoomFactor = Math.max(0.1f, Math.min(zoomFactor, 10.0f));
+            invalidate();
+            return true;
+        }
+    }
+    
+    private class GestureListener extends GestureDetector.SimpleOnGestureListener {
+        @Override
+        public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+            panX -= distanceX;
+            panY -= distanceY;
+            invalidate();
+            return true;
+        }
+    }
+
+    public void setPaths(List<float[]> slamPath, List<float[]> drPath, List<float[]> obstacles) {
+        this.slamPath = slamPath;
+        this.drPath = drPath;
+        this.obstacles = obstacles;
+        calculateBounds();
+        invalidate();
+    }
+    
+    public void setFps(float fps) {
+        this.fps = fps;
+        invalidate();
+    }
+
+    private void calculateBounds() {
+        minX = Float.MAX_VALUE;
+        maxX = Float.MIN_VALUE;
+        minZ = Float.MAX_VALUE;
+        maxZ = Float.MIN_VALUE;
+
+        List<float[]> allPoints = new ArrayList<>();
+        allPoints.addAll(slamPath);
+        allPoints.addAll(drPath);
+        allPoints.addAll(obstacles);
+
+        if (allPoints.isEmpty()) return;
+
+        for (float[] p : allPoints) {
+            if (p[0] < minX) minX = p[0];
+            if (p[0] > maxX) maxX = p[0];
+            if (p[2] < minZ) minZ = p[2];
+            if (p[2] > maxZ) maxZ = p[2];
+        }
+        
+        float padding = 1.0f;
+        minX -= padding;
+        maxX += padding;
+        minZ -= padding;
+        maxZ += padding;
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        canvas.drawColor(Color.BLACK);
+
+        if (slamPath.isEmpty() && drPath.isEmpty()) {
+            canvas.drawText("No path data available", 100, 100, textPaint);
+            return;
+        }
+
+        int width = getWidth();
+        int height = getHeight();
+
+        float rangeX = maxX - minX;
+        float rangeZ = maxZ - minZ;
+        
+        if (rangeX == 0) rangeX = 1;
+        if (rangeZ == 0) rangeZ = 1;
+
+        float scaleX = width / rangeX;
+        float scaleZ = height / rangeZ;
+        float scale = Math.min(scaleX, scaleZ) * 0.9f;
+        
+        // Apply Zoom
+        scale *= zoomFactor;
+
+        float offsetX = (width - rangeX * scale) / 2 - minX * scale + panX;
+        float offsetZ = (height - rangeZ * scale) / 2 - minZ * scale + panY;
+
+        // Draw Obstacles
+        for (float[] p : obstacles) {
+            float x = p[0] * scale + offsetX;
+            float y = p[2] * scale + offsetZ;
+            canvas.drawCircle(x, y, 1.5f * zoomFactor, obstaclePaint); // Reduced base size from 3f to 1.5f
+        }
+
+        // Draw SLAM Path
+        if (!slamPath.isEmpty()) {
+            for (int i = 0; i < slamPath.size() - 1; i++) {
+                float[] p1 = slamPath.get(i);
+                float[] p2 = slamPath.get(i + 1);
+                canvas.drawLine(p1[0] * scale + offsetX, p1[2] * scale + offsetZ,
+                                p2[0] * scale + offsetX, p2[2] * scale + offsetZ, slamPaint);
+            }
+            // Start Point
+            float[] start = slamPath.get(0);
+            canvas.drawCircle(start[0] * scale + offsetX, start[2] * scale + offsetZ, 10f * zoomFactor, startPaint);
+            
+            // End Point
+            float[] end = slamPath.get(slamPath.size() - 1);
+            canvas.drawCircle(end[0] * scale + offsetX, end[2] * scale + offsetZ, 10f * zoomFactor, endPaint);
+        }
+
+        // Draw DR Path
+        if (!drPath.isEmpty()) {
+            for (int i = 0; i < drPath.size() - 1; i++) {
+                float[] p1 = drPath.get(i);
+                float[] p2 = drPath.get(i + 1);
+                canvas.drawLine(p1[0] * scale + offsetX, p1[2] * scale + offsetZ,
+                                p2[0] * scale + offsetX, p2[2] * scale + offsetZ, drPaint);
+            }
+        }
+        
+        // Draw Drift Info
+        if (!slamPath.isEmpty() && !drPath.isEmpty()) {
+            float[] lastSlam = slamPath.get(slamPath.size() - 1);
+            float[] lastDr = drPath.get(drPath.size() - 1);
+            
+            double drift = Math.sqrt(Math.pow(lastSlam[0] - lastDr[0], 2) + 
+                                     Math.pow(lastSlam[1] - lastDr[1], 2) + 
+                                     Math.pow(lastSlam[2] - lastDr[2], 2));
+            
+            canvas.drawText(String.format("Drift: %.3f m", drift), 50, height - 100, driftPaint);
+        }
+        
+        // Legend & FPS
+        canvas.drawText("SLAM (Blue)", 50, 50, slamPaint);
+        canvas.drawText("DR (Green)", 50, 100, drPaint);
+        canvas.drawText("Obstacles (Red)", 50, 150, obstaclePaint);
+        canvas.drawText("Start (Cyan) / End (Magenta)", 50, 200, textPaint);
+        canvas.drawText(String.format("FPS: %.1f", fps), 50, 250, textPaint);
+    }
+}
