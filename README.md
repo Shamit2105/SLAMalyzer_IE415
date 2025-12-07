@@ -57,10 +57,6 @@ The following third-party libraries are partially included or require manual dow
 
 ### Step 1: Clone the Repository
 
-```bash
-git clone https://github.com/Rishik-Y/ORB_SLAM3_AR-for-Android.git
-cd ORB_SLAM3_AR-for-Android
-```
 
 ### Step 2: Download External Dependencies
 
