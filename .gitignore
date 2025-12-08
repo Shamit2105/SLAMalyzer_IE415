@@ -80,3 +80,5 @@ app/src/main/cpp/boost/
 app/src/main/cpp/Eigen/
 app/src/main/cpp/opencv/
 app/src/main/cpp/openssl/
+
+**/build/

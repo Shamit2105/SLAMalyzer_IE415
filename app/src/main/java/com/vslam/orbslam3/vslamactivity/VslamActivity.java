@@ -185,10 +185,37 @@ public class VslamActivity extends Activity implements CameraBridgeViewBase.CvCa
             }
         });
 
+        // Close Sidebar Button
+        Button btnCloseSidebar = (Button) findViewById(R.id.btn_close_sidebar);
+        btnCloseSidebar.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                sidebar.setVisibility(View.GONE);
+            }
+        });
+
+        // Post-Processing Scale Logic
+        final LinearLayout postProcessContainer = (LinearLayout) findViewById(R.id.post_process_container);
+        final TextView tvPostScale = (TextView) findViewById(R.id.tv_post_scale);
+        final SeekBar seekPostScale = (SeekBar) findViewById(R.id.seekbar_post_scale);
+        final Map2DView map2DView = (Map2DView) findViewById(R.id.map_2d_view);
+        
+        seekPostScale.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                float scale = progress / 100.0f;
+                tvPostScale.setText("Map Scale: " + scale);
+                map2DView.setGlobalScale(scale);
+            }
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {}
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
+
         // End Button Logic
         final Button btnEnd = (Button) findViewById(R.id.btn_end_recording);
         final LinearLayout legend = (LinearLayout) findViewById(R.id.legend_container);
-        final Map2DView map2DView = (Map2DView) findViewById(R.id.map_2d_view);
 
         btnEnd.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -196,6 +223,11 @@ public class VslamActivity extends Activity implements CameraBridgeViewBase.CvCa
                 isRecording = false;
                 isFinished = true;
                 btnEnd.setVisibility(View.GONE);
+                btnToggle.setVisibility(View.GONE); // Hide settings toggle
+                sidebar.setVisibility(View.GONE); // Hide sidebar if open
+                
+                // Show Post-Processing Controls
+                postProcessContainer.setVisibility(View.VISIBLE);
                 
                 // Hide AR views
                 glSurfaceView.setVisibility(View.GONE);
@@ -246,13 +278,9 @@ public class VslamActivity extends Activity implements CameraBridgeViewBase.CvCa
         tvSensorData = (TextView) findViewById(R.id.tv_sensor_data);
         tvPointCount = (TextView) findViewById(R.id.tv_point_count);
         
-        if (mode.equals("DR_ONLY")) {
-            mOpenCvCameraView.setVisibility(View.GONE);
+        // Sensor Data Update Loop (Run for DR_ONLY or SLAM_DR)
+        if (mode.contains("DR")) {
             tvSensorData.setVisibility(View.VISIBLE);
-            tvPointCount.setVisibility(View.GONE);
-            glSurfaceView.setBackgroundColor(0xFF000000); // Black background
-            
-            // Sensor Data Update Loop
             sensorRunnable = new Runnable() {
                 @Override
                 public void run() {
@@ -263,14 +291,23 @@ public class VslamActivity extends Activity implements CameraBridgeViewBase.CvCa
                                                     acc[0], acc[1], acc[2], pos[0], pos[1], pos[2]);
                         tvSensorData.setText(text);
                         
-                        if (isRecording) {
+                        if (isRecording && mode.equals("DR_ONLY")) { // Only add to path here if DR_ONLY, otherwise added in onCameraFrame
                             drPath.add(new float[]{pos[0], pos[1], pos[2]});
                         }
                     }
-                    sensorHandler.postDelayed(this, 100);
+                    sensorHandler.postDelayed(this, 1000); // Update every 1 second
                 }
             };
             sensorHandler.post(sensorRunnable);
+        }
+
+        if (mode.equals("DR_ONLY")) {
+            mOpenCvCameraView.setVisibility(View.GONE);
+            tvPointCount.setVisibility(View.GONE);
+            glSurfaceView.setBackgroundColor(0xFF000000); // Black background
+        } else {
+            // SLAM or SLAM_DR
+            tvPointCount.setVisibility(View.VISIBLE);
         }
         
         deadReckoning = new DeadReckoning(this);

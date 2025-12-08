@@ -35,6 +35,7 @@ public class Map2DView extends View {
     private float zoomFactor = 1.0f;
     private float panX = 0f;
     private float panY = 0f;
+    private float globalScale = 1.0f;
 
     public Map2DView(Context context) {
         super(context);
@@ -44,6 +45,12 @@ public class Map2DView extends View {
     public Map2DView(Context context, AttributeSet attrs) {
         super(context, attrs);
         init(context);
+    }
+    
+    public void setGlobalScale(float scale) {
+        this.globalScale = scale;
+        calculateBounds();
+        invalidate();
     }
 
     private void init(Context context) {
@@ -147,10 +154,12 @@ public class Map2DView extends View {
         if (allPoints.isEmpty()) return;
 
         for (float[] p : allPoints) {
-            if (p[0] < minX) minX = p[0];
-            if (p[0] > maxX) maxX = p[0];
-            if (p[2] < minZ) minZ = p[2];
-            if (p[2] > maxZ) maxZ = p[2];
+            float x = p[0] * globalScale;
+            float z = p[2] * globalScale;
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (z < minZ) minZ = z;
+            if (z > maxZ) maxZ = z;
         }
         
         float padding = 1.0f;
@@ -189,37 +198,54 @@ public class Map2DView extends View {
         float offsetX = (width - rangeX * scale) / 2 - minX * scale + panX;
         float offsetZ = (height - rangeZ * scale) / 2 - minZ * scale + panY;
 
-        // Draw Obstacles
-        for (float[] p : obstacles) {
-            float x = p[0] * scale + offsetX;
-            float y = p[2] * scale + offsetZ;
-            canvas.drawCircle(x, y, 1.5f * zoomFactor, obstaclePaint); // Reduced base size from 3f to 1.5f
+        // Draw Grid (1 meter spacing if scale is correct)
+        Paint gridPaint = new Paint();
+        gridPaint.setColor(Color.DKGRAY);
+        gridPaint.setStrokeWidth(2f);
+        
+        // Draw a 10x10 grid centered
+        for (int i = -10; i <= 10; i++) {
+            float x = i * globalScale * scale + offsetX;
+            float z = i * globalScale * scale + offsetZ;
+            // Vertical lines
+            canvas.drawLine(x, 0, x, height, gridPaint);
+            // Horizontal lines
+            canvas.drawLine(0, z, width, z, gridPaint);
         }
 
-        // Draw SLAM Path
+        // Draw Obstacles (Larger and more distinct)
+        for (float[] p : obstacles) {
+            float x = p[0] * globalScale * scale + offsetX;
+            float y = p[2] * globalScale * scale + offsetZ;
+            canvas.drawCircle(x, y, 3.0f * zoomFactor, obstaclePaint); // Increased size
+        }
+
+        // Draw SLAM Path (Thicker)
+        slamPaint.setStrokeWidth(8f * zoomFactor);
         if (!slamPath.isEmpty()) {
             for (int i = 0; i < slamPath.size() - 1; i++) {
                 float[] p1 = slamPath.get(i);
                 float[] p2 = slamPath.get(i + 1);
-                canvas.drawLine(p1[0] * scale + offsetX, p1[2] * scale + offsetZ,
-                                p2[0] * scale + offsetX, p2[2] * scale + offsetZ, slamPaint);
+                canvas.drawLine(p1[0] * globalScale * scale + offsetX, p1[2] * globalScale * scale + offsetZ,
+                                p2[0] * globalScale * scale + offsetX, p2[2] * globalScale * scale + offsetZ, slamPaint);
             }
             // Start Point
             float[] start = slamPath.get(0);
-            canvas.drawCircle(start[0] * scale + offsetX, start[2] * scale + offsetZ, 10f * zoomFactor, startPaint);
+            canvas.drawCircle(start[0] * globalScale * scale + offsetX, start[2] * globalScale * scale + offsetZ, 15f * zoomFactor, startPaint);
             
             // End Point
             float[] end = slamPath.get(slamPath.size() - 1);
-            canvas.drawCircle(end[0] * scale + offsetX, end[2] * scale + offsetZ, 10f * zoomFactor, endPaint);
+            canvas.drawCircle(end[0] * globalScale * scale + offsetX, end[2] * globalScale * scale + offsetZ, 15f * zoomFactor, endPaint);
         }
 
-        // Draw DR Path
+        // Draw DR Path (Thicker)
+        drPaint.setStrokeWidth(8f * zoomFactor);
         if (!drPath.isEmpty()) {
             for (int i = 0; i < drPath.size() - 1; i++) {
                 float[] p1 = drPath.get(i);
                 float[] p2 = drPath.get(i + 1);
-                canvas.drawLine(p1[0] * scale + offsetX, p1[2] * scale + offsetZ,
-                                p2[0] * scale + offsetX, p2[2] * scale + offsetZ, drPaint);
+                canvas.drawLine(p1[0] * globalScale * scale + offsetX, p1[2] * globalScale * scale + offsetZ,
+                                p2[0] * globalScale * scale + offsetX, p2[2] * globalScale * scale + offsetZ, drPaint);
             }
         }
         
@@ -228,9 +254,9 @@ public class Map2DView extends View {
             float[] lastSlam = slamPath.get(slamPath.size() - 1);
             float[] lastDr = drPath.get(drPath.size() - 1);
             
-            double drift = Math.sqrt(Math.pow(lastSlam[0] - lastDr[0], 2) + 
-                                     Math.pow(lastSlam[1] - lastDr[1], 2) + 
-                                     Math.pow(lastSlam[2] - lastDr[2], 2));
+            double drift = Math.sqrt(Math.pow((lastSlam[0] - lastDr[0]) * globalScale, 2) + 
+                                     Math.pow((lastSlam[1] - lastDr[1]) * globalScale, 2) + 
+                                     Math.pow((lastSlam[2] - lastDr[2]) * globalScale, 2));
             
             canvas.drawText(String.format("Drift: %.3f m", drift), 50, height - 100, driftPaint);
         }
