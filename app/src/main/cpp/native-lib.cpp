@@ -299,6 +299,8 @@ Java_com_vslam_orbslam3_vslamactivity_VslamActivity_getMapPoints(JNIEnv *env, jo
             points.push_back(mpos.at<float>(0));
             points.push_back(mpos.at<float>(1));
             points.push_back(mpos.at<float>(2));
+            // Add observation count as the 4th element
+            points.push_back((float)vpMPs[i]->Observations());
         }
     }
     

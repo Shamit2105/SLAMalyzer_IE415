@@ -237,10 +237,21 @@ public class VslamActivity extends Activity implements CameraBridgeViewBase.CvCa
                 
                 // Get Map Points from Native
                 float[] mapPoints = getMapPoints();
-                List<float[]> obstacles = new ArrayList<>();
+                List<float[]> staticObstacles = new ArrayList<>();
+                List<float[]> dynamicObstacles = new ArrayList<>();
+                
                 if (mapPoints != null) {
-                    for (int i = 0; i < mapPoints.length; i += 3) {
-                        obstacles.add(new float[]{mapPoints[i], mapPoints[i+1], mapPoints[i+2]});
+                    // Now reading 4 values per point: x, y, z, observations
+                    for (int i = 0; i < mapPoints.length; i += 4) {
+                        float[] point = new float[]{mapPoints[i], mapPoints[i+1], mapPoints[i+2]};
+                        float observations = mapPoints[i+3];
+                        
+                        // Threshold for static vs dynamic (e.g., > 5 observations = static)
+                        if (observations > 5) {
+                            staticObstacles.add(point);
+                        } else {
+                            dynamicObstacles.add(point);
+                        }
                     }
                 }
                 
@@ -256,7 +267,7 @@ public class VslamActivity extends Activity implements CameraBridgeViewBase.CvCa
                 // Show 2D Map
                 map2DView.setVisibility(View.VISIBLE);
                 map2DView.setFps(fps);
-                map2DView.setPaths(new ArrayList<>(slamPath), new ArrayList<>(drPath), obstacles);
+                map2DView.setPaths(new ArrayList<>(slamPath), new ArrayList<>(drPath), staticObstacles, dynamicObstacles);
             }
         });
 
@@ -272,7 +283,8 @@ public class VslamActivity extends Activity implements CameraBridgeViewBase.CvCa
         glSurfaceView.setRenderer(earthRender);
         // 设置渲染模式为主动渲染
         glSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
-        glSurfaceView.setZOrderOnTop(true);
+        // Use MediaOverlay to allow UI elements on top
+        glSurfaceView.setZOrderMediaOverlay(true);
 
         // DR Only Mode Setup
         tvSensorData = (TextView) findViewById(R.id.tv_sensor_data);

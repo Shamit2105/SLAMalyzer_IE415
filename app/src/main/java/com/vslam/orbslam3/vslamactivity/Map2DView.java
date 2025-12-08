@@ -16,12 +16,14 @@ public class Map2DView extends View {
 
     private List<float[]> slamPath = new ArrayList<>();
     private List<float[]> drPath = new ArrayList<>();
-    private List<float[]> obstacles = new ArrayList<>();
+    private List<float[]> staticObstacles = new ArrayList<>();
+    private List<float[]> dynamicObstacles = new ArrayList<>();
     private float fps = 0;
     
     private Paint slamPaint;
     private Paint drPaint;
-    private Paint obstaclePaint;
+    private Paint staticObstaclePaint;
+    private Paint dynamicObstaclePaint;
     private Paint textPaint;
     private Paint driftPaint;
     private Paint startPaint;
@@ -66,10 +68,15 @@ public class Map2DView extends View {
         drPaint.setStyle(Paint.Style.STROKE);
         drPaint.setAntiAlias(true);
         
-        obstaclePaint = new Paint();
-        obstaclePaint.setColor(Color.RED);
-        obstaclePaint.setStyle(Paint.Style.FILL);
-        obstaclePaint.setAntiAlias(true);
+        staticObstaclePaint = new Paint();
+        staticObstaclePaint.setColor(Color.RED);
+        staticObstaclePaint.setStyle(Paint.Style.FILL);
+        staticObstaclePaint.setAntiAlias(true);
+        
+        dynamicObstaclePaint = new Paint();
+        dynamicObstaclePaint.setColor(Color.parseColor("#FF8888")); // Light Red
+        dynamicObstaclePaint.setStyle(Paint.Style.FILL);
+        dynamicObstaclePaint.setAntiAlias(true);
         
         textPaint = new Paint();
         textPaint.setColor(Color.WHITE);
@@ -127,10 +134,11 @@ public class Map2DView extends View {
         }
     }
 
-    public void setPaths(List<float[]> slamPath, List<float[]> drPath, List<float[]> obstacles) {
+    public void setPaths(List<float[]> slamPath, List<float[]> drPath, List<float[]> staticObstacles, List<float[]> dynamicObstacles) {
         this.slamPath = slamPath;
         this.drPath = drPath;
-        this.obstacles = obstacles;
+        this.staticObstacles = staticObstacles;
+        this.dynamicObstacles = dynamicObstacles;
         calculateBounds();
         invalidate();
     }
@@ -149,7 +157,8 @@ public class Map2DView extends View {
         List<float[]> allPoints = new ArrayList<>();
         allPoints.addAll(slamPath);
         allPoints.addAll(drPath);
-        allPoints.addAll(obstacles);
+        allPoints.addAll(staticObstacles);
+        allPoints.addAll(dynamicObstacles);
 
         if (allPoints.isEmpty()) return;
 
@@ -213,11 +222,18 @@ public class Map2DView extends View {
             canvas.drawLine(0, z, width, z, gridPaint);
         }
 
-        // Draw Obstacles (Larger and more distinct)
-        for (float[] p : obstacles) {
+        // Draw Dynamic Obstacles (Small dots)
+        for (float[] p : dynamicObstacles) {
             float x = p[0] * globalScale * scale + offsetX;
             float y = p[2] * globalScale * scale + offsetZ;
-            canvas.drawCircle(x, y, 3.0f * zoomFactor, obstaclePaint); // Increased size
+            canvas.drawCircle(x, y, 2.0f * zoomFactor, dynamicObstaclePaint);
+        }
+
+        // Draw Static Obstacles (Large, connected-looking blobs)
+        for (float[] p : staticObstacles) {
+            float x = p[0] * globalScale * scale + offsetX;
+            float y = p[2] * globalScale * scale + offsetZ;
+            canvas.drawCircle(x, y, 6.0f * zoomFactor, staticObstaclePaint); // Large radius to simulate outline/blob
         }
 
         // Draw SLAM Path (Thicker)
@@ -264,8 +280,9 @@ public class Map2DView extends View {
         // Legend & FPS
         canvas.drawText("SLAM (Blue)", 50, 50, slamPaint);
         canvas.drawText("DR (Green)", 50, 100, drPaint);
-        canvas.drawText("Obstacles (Red)", 50, 150, obstaclePaint);
-        canvas.drawText("Start (Cyan) / End (Magenta)", 50, 200, textPaint);
-        canvas.drawText(String.format("FPS: %.1f", fps), 50, 250, textPaint);
+        canvas.drawText("Static (Red Blob)", 50, 150, staticObstaclePaint);
+        canvas.drawText("Dynamic (Pink Dot)", 50, 200, dynamicObstaclePaint);
+        canvas.drawText("Start (Cyan) / End (Magenta)", 50, 250, textPaint);
+        canvas.drawText(String.format("FPS: %.1f", fps), 50, 300, textPaint);
     }
 }
