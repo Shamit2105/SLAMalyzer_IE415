@@ -301,6 +301,7 @@ public class VslamActivity extends Activity implements CameraBridgeViewBase.CvCa
         }
         
         deadReckoning = new DeadReckoning(this);
+        deadReckoning.reset();
         deadReckoning.setListener(new DeadReckoning.Listener() {
             @Override
             public void onData(final float[] accel, final float[] pos) {
@@ -411,7 +412,10 @@ public class VslamActivity extends Activity implements CameraBridgeViewBase.CvCa
 
         glSurfaceView.onResume();
 
-        if (deadReckoning != null) deadReckoning.start();
+        if (deadReckoning != null) {
+            deadReckoning.reset();
+            deadReckoning.start();
+        }
     }
 
 

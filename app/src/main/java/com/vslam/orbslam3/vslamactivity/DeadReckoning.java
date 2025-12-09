@@ -7,6 +7,10 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 
 public class DeadReckoning implements SensorEventListener {
+    private static final float ACC_EPS = 0.08f; // m/s^2 noise floor
+    private static final float VEL_EPS = 0.01f; // m/s clamp floor
+    private static final float DAMP = 0.98f;    // simple friction to bleed drift
+
     private SensorManager sensorManager;
     private float[] rotationMatrix = new float[9];
     private float[] velocity = new float[]{0,0,0};
@@ -25,6 +29,14 @@ public class DeadReckoning implements SensorEventListener {
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         // Initialize rotation matrix to identity
         rotationMatrix[0] = 1; rotationMatrix[4] = 1; rotationMatrix[8] = 1;
+    }
+
+    public void reset() {
+        for (int i = 0; i < 3; i++) {
+            velocity[i] = 0f;
+            position[i] = 0f;
+        }
+        lastTimestamp = 0;
     }
 
     public void setListener(Listener listener) {
@@ -80,9 +92,15 @@ public class DeadReckoning implements SensorEventListener {
             accWorld[1] = rotationMatrix[3]*linearAccel[0] + rotationMatrix[4]*linearAccel[1] + rotationMatrix[5]*linearAccel[2];
             accWorld[2] = rotationMatrix[6]*linearAccel[0] + rotationMatrix[7]*linearAccel[1] + rotationMatrix[8]*linearAccel[2];
 
-            // Simple integration
+            // Clamp tiny accelerations to reduce bias drift
+            for (int i = 0; i < 3; i++) {
+                if (Math.abs(accWorld[i]) < ACC_EPS) accWorld[i] = 0f;
+            }
+
+            // Integration with light damping to bleed accumulated drift
             for(int i=0; i<3; i++) {
-                velocity[i] += accWorld[i] * dt;
+                velocity[i] = (velocity[i] + accWorld[i] * dt) * DAMP;
+                if (Math.abs(velocity[i]) < VEL_EPS) velocity[i] = 0f;
                 position[i] += velocity[i] * dt;
             }
 
