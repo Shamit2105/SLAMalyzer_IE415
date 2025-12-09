@@ -3,39 +3,64 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:gravity="center"
-    android:background="#000000">
+    android:gravity="center_horizontal"
+    android:background="@drawable/bg_scene_gradient"
+    android:padding="24dp">
+
+    <ImageView
+        android:layout_width="220dp"
+        android:layout_height="220dp"
+        android:src="@mipmap/logo"
+        android:contentDescription="SlamAlyzer Logo"
+        android:layout_marginBottom="12dp" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="ORB-SLAM3 AR"
+        android:text="SlamAlyzer"
         android:textColor="#FFFFFF"
-        android:textSize="30sp"
+        android:textSize="32sp"
         android:textStyle="bold"
-        android:layout_marginBottom="50dp"/>
+        android:layout_marginBottom="6dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Precision AR Mapping &amp; DR"
+        android:textColor="#A8E1FF"
+        android:textSize="16sp"
+        android:layout_marginBottom="32dp"/>
 
     <Button
         android:id="@+id/btn_slam"
-        android:layout_width="200dp"
-        android:layout_height="60dp"
+        android:layout_width="match_parent"
+        android:layout_height="58dp"
         android:text="Start SLAM"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
         android:textSize="18sp"
-        android:layout_marginBottom="20dp"/>
+        android:background="@drawable/bg_button_primary"
+        android:layout_marginBottom="16dp"/>
 
     <Button
         android:id="@+id/btn_slam_dr"
-        android:layout_width="200dp"
-        android:layout_height="60dp"
+        android:layout_width="match_parent"
+        android:layout_height="58dp"
         android:text="SLAM + DR"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
         android:textSize="18sp"
-        android:layout_marginBottom="20dp"/>
+        android:background="@drawable/bg_button_ghost"
+        android:layout_marginBottom="16dp"/>
 
     <Button
         android:id="@+id/btn_dr_only"
-        android:layout_width="200dp"
-        android:layout_height="60dp"
+        android:layout_width="match_parent"
+        android:layout_height="58dp"
         android:text="Dead Reckoning Only"
-        android:textSize="18sp"/>
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:background="@drawable/bg_button_ghost"/>
 
 </LinearLayout>
