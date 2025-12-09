@@ -57,8 +57,6 @@ public class VslamActivity extends Activity implements CameraBridgeViewBase.CvCa
     private boolean isFinished = false;
     private TextView tvSensorData;
     private TextView tvPointCount;
-    private android.os.Handler sensorHandler = new android.os.Handler();
-    private Runnable sensorRunnable;
     
     private long startTime = 0;
     private int frameCount = 0;
@@ -289,28 +287,8 @@ public class VslamActivity extends Activity implements CameraBridgeViewBase.CvCa
         // DR Only Mode Setup
         tvSensorData = (TextView) findViewById(R.id.tv_sensor_data);
         tvPointCount = (TextView) findViewById(R.id.tv_point_count);
-        
-        // Sensor Data Update Loop (Run for DR_ONLY or SLAM_DR)
         if (mode.contains("DR")) {
             tvSensorData.setVisibility(View.VISIBLE);
-            sensorRunnable = new Runnable() {
-                @Override
-                public void run() {
-                    if (deadReckoning != null) {
-                        float[] acc = deadReckoning.getLinearAccel();
-                        float[] pos = deadReckoning.getPosition();
-                        String text = String.format("Linear Accel:\nX: %.2f\nY: %.2f\nZ: %.2f\n\nPosition:\nX: %.2f\nY: %.2f\nZ: %.2f", 
-                                                    acc[0], acc[1], acc[2], pos[0], pos[1], pos[2]);
-                        tvSensorData.setText(text);
-                        
-                        if (isRecording && mode.equals("DR_ONLY")) { // Only add to path here if DR_ONLY, otherwise added in onCameraFrame
-                            drPath.add(new float[]{pos[0], pos[1], pos[2]});
-                        }
-                    }
-                    sensorHandler.postDelayed(this, 1000); // Update every 1 second
-                }
-            };
-            sensorHandler.post(sensorRunnable);
         }
 
         if (mode.equals("DR_ONLY")) {
@@ -323,7 +301,25 @@ public class VslamActivity extends Activity implements CameraBridgeViewBase.CvCa
         }
         
         deadReckoning = new DeadReckoning(this);
-        deadReckoning.start();
+        deadReckoning.setListener(new DeadReckoning.Listener() {
+            @Override
+            public void onData(final float[] accel, final float[] pos) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (tvSensorData != null && mode.contains("DR")) {
+                            String text = String.format("Linear Accel:\nX: %.2f\nY: %.2f\nZ: %.2f\n\nPosition:\nX: %.2f\nY: %.2f\nZ: %.2f",
+                                    accel[0], accel[1], accel[2], pos[0], pos[1], pos[2]);
+                            tvSensorData.setText(text);
+                        }
+
+                        if (isRecording && mode.equals("DR_ONLY")) {
+                            drPath.add(new float[]{pos[0], pos[1], pos[2]});
+                        }
+                    }
+                });
+            }
+        });
         
         glSurfaceView.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -414,6 +410,8 @@ public class VslamActivity extends Activity implements CameraBridgeViewBase.CvCa
         }
 
         glSurfaceView.onResume();
+
+        if (deadReckoning != null) deadReckoning.start();
     }
 
 

@@ -15,10 +15,20 @@ public class DeadReckoning implements SensorEventListener {
     
     private float[] linearAccel = new float[3];
 
+    public interface Listener {
+        void onData(float[] accel, float[] position);
+    }
+
+    private Listener listener;
+
     public DeadReckoning(Context context) {
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
         // Initialize rotation matrix to identity
         rotationMatrix[0] = 1; rotationMatrix[4] = 1; rotationMatrix[8] = 1;
+    }
+
+    public void setListener(Listener listener) {
+        this.listener = listener;
     }
 
     public void start() {
@@ -74,6 +84,10 @@ public class DeadReckoning implements SensorEventListener {
             for(int i=0; i<3; i++) {
                 velocity[i] += accWorld[i] * dt;
                 position[i] += velocity[i] * dt;
+            }
+
+            if (listener != null) {
+                listener.onData(linearAccel.clone(), position.clone());
             }
         }
     }
